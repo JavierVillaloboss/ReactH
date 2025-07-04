@@ -2,17 +2,17 @@ import React, { useState, useEffect } from 'react';
 import '../estilos/registroActividad.css';
 
 const RegistroActividad = () => {
-  // Estados del formulario
   const [responsable, setResponsable] = useState('');
   const [asistentesEstimados, setAsistentesEstimados] = useState('');
   const [tipoActividad, setTipoActividad] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [fechaActividad, setFechaActividad] = useState('');
 
-  // Estado para almacenar la lista de actividades
   const [actividades, setActividades] = useState([]);
+  const [modoEdicion, setModoEdicion] = useState(false);
+  const [idEditando, setIdEditando] = useState(null);
 
-  // Cargar actividades desde LocalStorage cuando se monta el componente
+  // Cargar desde localStorage
   useEffect(() => {
     const datosGuardados = localStorage.getItem('actividadesVecinales');
     if (datosGuardados) {
@@ -20,17 +20,17 @@ const RegistroActividad = () => {
     }
   }, []);
 
-  // Guardar automáticamente en LocalStorage cuando actividades cambia
+  // Guardar en localStorage
   useEffect(() => {
     localStorage.setItem('actividadesVecinales', JSON.stringify(actividades));
   }, [actividades]);
 
-  // Manejar envío del formulario
+  // Guardar o actualizar
   const manejarEnvio = (e) => {
     e.preventDefault();
 
     const nuevaActividad = {
-      id: Date.now(), // ID único para cada actividad
+      id: modoEdicion ? idEditando : Date.now(),
       responsable,
       asistentesEstimados,
       tipoActividad,
@@ -38,7 +38,18 @@ const RegistroActividad = () => {
       fechaActividad,
     };
 
-    setActividades([...actividades, nuevaActividad]);
+    if (modoEdicion) {
+      // Actualizar actividad
+      const actividadesActualizadas = actividades.map((actividad) =>
+        actividad.id === idEditando ? nuevaActividad : actividad
+      );
+      setActividades(actividadesActualizadas);
+      setModoEdicion(false);
+      setIdEditando(null);
+    } else {
+      // Crear nueva actividad
+      setActividades([...actividades, nuevaActividad]);
+    }
 
     // Limpiar formulario
     setResponsable('');
@@ -48,10 +59,27 @@ const RegistroActividad = () => {
     setFechaActividad('');
   };
 
+  // Eliminar actividad
+  const eliminarActividad = (id) => {
+    const actividadesFiltradas = actividades.filter((actividad) => actividad.id !== id);
+    setActividades(actividadesFiltradas);
+  };
+
+  // Cargar datos en formulario para editar
+  const editarActividad = (actividad) => {
+    setResponsable(actividad.responsable);
+    setAsistentesEstimados(actividad.asistentesEstimados);
+    setTipoActividad(actividad.tipoActividad);
+    setDescripcion(actividad.descripcion);
+    setFechaActividad(actividad.fechaActividad);
+    setModoEdicion(true);
+    setIdEditando(actividad.id);
+  };
+
   return (
     <>
       <form className="formulario" onSubmit={manejarEnvio}>
-        <h2>Registro de Actividad Vecinal</h2>
+        <h2>{modoEdicion ? 'Editar Actividad' : 'Registro de Actividad Vecinal'}</h2>
 
         <label>Responsable:</label>
         <input type="text" value={responsable} onChange={(e) => setResponsable(e.target.value)} required />
@@ -73,10 +101,10 @@ const RegistroActividad = () => {
         <label>Fecha programada:</label>
         <input type="date" value={fechaActividad} onChange={(e) => setFechaActividad(e.target.value)} required />
 
-        <button type="submit">Guardar Actividad</button>
+        <button type="submit">{modoEdicion ? 'Actualizar' : 'Guardar Actividad'}</button>
       </form>
 
-      {/* Lista de actividades guardadas */}
+      {/* Lista de actividades */}
       <section className="lista-actividades">
         <h3>Actividades Registradas</h3>
         {actividades.length === 0 ? (
@@ -86,6 +114,9 @@ const RegistroActividad = () => {
             {actividades.map((actividad) => (
               <li key={actividad.id}>
                 <strong>{actividad.tipoActividad}</strong> - {actividad.responsable} ({actividad.fechaActividad})
+                <br />
+                <button onClick={() => editarActividad(actividad)}>Editar</button>
+                <button onClick={() => eliminarActividad(actividad.id)}>Eliminar</button>
               </li>
             ))}
           </ul>
